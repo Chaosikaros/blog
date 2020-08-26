@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <title>Vicon动作捕捉系统评测 – Chaosikaros – Blog</title>
+
+      <meta charset="utf-8" />
+    <meta content='text/html; charset=utf-8' http-equiv='Content-Type'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0'>
+
+    
+    <meta name="description" content="今天有幸接触到了Vicon的一套动作捕捉系统，Vero V2.2。报价貌似三四十万，主要的硬件是八台红外动作捕捉相机，每一台都能买辆车了。参数如下。
+
+Parameters: Max HZ = 330, Max resolution = 2.2M pixels,
+
+Horizontal FOV = 98.1°, Vertical FOV = 50.1°.
+
+Min. number of cameras = 2.
+
+配了一个交换机，相机用带供电的网线和交换机连接再连到电脑上。
+
+原理看似很简单，就是把一些涂有反光材料的小球贴到被追踪物体上，相机镜头外有一圈红外LED，中间的红外相机就能看到小球反射的光。把画面发给电脑来计算位置，配置上要求独立显卡，那估计是用到显卡来运算了，也可能是配套软件要求独立显卡。听供应商的人讲，严格的暗室实验环境下精度能到0.01mm，一般使用好像只有0.xmm。
+
+这套系统的优点是高精度高帧率，和一系列配套的软件。
+
+Nexus: designed for life sciences: automated features, intelligent processing and flexible controls.
+
+Shōgun: designed for Visual effects (VFX). For media and entertainment applications.
+
+Evoke: designed for location based VR (LBVR).
+
+Tracker: designed for high precise tracking.
+
+ProCalc: visual application for creating custom kinematic models.
+
+Vicon Control: mobile app for system control and capture.
+
+Supported game engines: Unreal Engine, Unity3D and so on.
+
+Datastream SDK: for MATLAB, Labview, C++ and .Net.
+
+缺点除了垄断行业带来的虚高价格外（定位的塑料小球一个200元，某宝20），其他缺点也不少。首先是定位球多的话，因为遮挡而丢失的数据就会增加。官方的配套软件能在录制完后进行手动的数据补全，可以根据其他定位球的前后轨迹来计算被遮挡住的球的位置。
+
+定位球摆放上需要尽量摆成一个面，这样丢失点的话，容易计算。定位球有不同的大小，可以贴到嘴唇上读唇，也可以贴到身上，无人机上。软件上，主要的软件Nexus只支持windows，系统界面设计和建模软件差不多。
+
+供应商给看了很多例子，电影游戏动画，机器人，步态分析等等。看无人机例子的时候想到了网上tango的无人机定位应用，也很稳。但后来我用tango做小型无人车定位时却很容易遇到漂移，可能是因为我用的是阉割版。想起来最近有个依靠深度学习加点云避障的无人机看上去也很稳。红外定位球的动作捕捉，和这类点云SLAM的最大区别还是精度和帧率吧。红外定位球的摆放数量几乎不受限制，每台相机最远追踪距离是十米，而且可以摆放多个相机。小型化无需外置传感器的高精度定位还是有不少应用场景，比如最近几年的各种VR、MR一体机。如果这类定位技术能低成本量产，精度和帧率提上去的话，或许能取代红外动作捕捉的部分应用场景。
+
+当初采购的时候我还对比了一下Advanced Realtime Tracking的ARTTRACK5，做红外动作捕捉的还有别的公司，ART就是其中之一。不过ART的配置略逊一筹，软件支持上没有Vicon多，ART就只支持Unity，Vicon还支持虚幻。但这两个公司的定位上是有些差异的，Vicon给的应用例子大多还是电影游戏为主，说起动作捕捉，一般人可能也就只会想到电影和游戏吧。ART给了一些航空航天和汽车制造行业的例子。Vicon的工学例子大多是无人机和机器人。
+
+对于一般人来说，这套系统的最大用途可能是VR全身动作捕捉，这套系统的定位延迟据称是比一般的VR低。但成本还是太高了，Kinect也能做动作捕捉，价格可能只相当于Vicon的几个定位球。Kinect也能串联避免盲区，可是Kinect的大部分应用可能都没有支持串联。这套系统对于一般人来说最大的用途应该只是更精准的VR全身动作捕捉，高质量Vtuber。
+
+面部表情和身体动作捕捉也有不少廉价的替代方案，把tango玩死后苹果又开始进军深度相机，unity官方就有一个用iphone前置深度相机录制面部表情动画的例子，除了精度和帧率比不如红外动捕外，剩下的就几乎都是优点。深度相机和一般相机的身体动作捕捉方案也有不少。但还是在精度和帧率上打不过红外动捕，这也正是红外动捕用户的最大需求。
+" />
+    <meta property="og:description" content="今天有幸接触到了Vicon的一套动作捕捉系统，Vero V2.2。报价貌似三四十万，主要的硬件是八台红外动作捕捉相机，每一台都能买辆车了。参数如下。
+
+Parameters: Max HZ = 330, Max resolution = 2.2M pixels,
+
+Horizontal FOV = 98.1°, Vertical FOV = 50.1°.
+
+Min. number of cameras = 2.
+
+配了一个交换机，相机用带供电的网线和交换机连接再连到电脑上。
+
+原理看似很简单，就是把一些涂有反光材料的小球贴到被追踪物体上，相机镜头外有一圈红外LED，中间的红外相机就能看到小球反射的光。把画面发给电脑来计算位置，配置上要求独立显卡，那估计是用到显卡来运算了，也可能是配套软件要求独立显卡。听供应商的人讲，严格的暗室实验环境下精度能到0.01mm，一般使用好像只有0.xmm。
+
+这套系统的优点是高精度高帧率，和一系列配套的软件。
+
+Nexus: designed for life sciences: automated features, intelligent processing and flexible controls.
+
+Shōgun: designed for Visual effects (VFX). For media and entertainment applications.
+
+Evoke: designed for location based VR (LBVR).
+
+Tracker: designed for high precise tracking.
+
+ProCalc: visual application for creating custom kinematic models.
+
+Vicon Control: mobile app for system control and capture.
+
+Supported game engines: Unreal Engine, Unity3D and so on.
+
+Datastream SDK: for MATLAB, Labview, C++ and .Net.
+
+缺点除了垄断行业带来的虚高价格外（定位的塑料小球一个200元，某宝20），其他缺点也不少。首先是定位球多的话，因为遮挡而丢失的数据就会增加。官方的配套软件能在录制完后进行手动的数据补全，可以根据其他定位球的前后轨迹来计算被遮挡住的球的位置。
+
+定位球摆放上需要尽量摆成一个面，这样丢失点的话，容易计算。定位球有不同的大小，可以贴到嘴唇上读唇，也可以贴到身上，无人机上。软件上，主要的软件Nexus只支持windows，系统界面设计和建模软件差不多。
+
+供应商给看了很多例子，电影游戏动画，机器人，步态分析等等。看无人机例子的时候想到了网上tango的无人机定位应用，也很稳。但后来我用tango做小型无人车定位时却很容易遇到漂移，可能是因为我用的是阉割版。想起来最近有个依靠深度学习加点云避障的无人机看上去也很稳。红外定位球的动作捕捉，和这类点云SLAM的最大区别还是精度和帧率吧。红外定位球的摆放数量几乎不受限制，每台相机最远追踪距离是十米，而且可以摆放多个相机。小型化无需外置传感器的高精度定位还是有不少应用场景，比如最近几年的各种VR、MR一体机。如果这类定位技术能低成本量产，精度和帧率提上去的话，或许能取代红外动作捕捉的部分应用场景。
+
+当初采购的时候我还对比了一下Advanced Realtime Tracking的ARTTRACK5，做红外动作捕捉的还有别的公司，ART就是其中之一。不过ART的配置略逊一筹，软件支持上没有Vicon多，ART就只支持Unity，Vicon还支持虚幻。但这两个公司的定位上是有些差异的，Vicon给的应用例子大多还是电影游戏为主，说起动作捕捉，一般人可能也就只会想到电影和游戏吧。ART给了一些航空航天和汽车制造行业的例子。Vicon的工学例子大多是无人机和机器人。
+
+对于一般人来说，这套系统的最大用途可能是VR全身动作捕捉，这套系统的定位延迟据称是比一般的VR低。但成本还是太高了，Kinect也能做动作捕捉，价格可能只相当于Vicon的几个定位球。Kinect也能串联避免盲区，可是Kinect的大部分应用可能都没有支持串联。这套系统对于一般人来说最大的用途应该只是更精准的VR全身动作捕捉，高质量Vtuber。
+
+面部表情和身体动作捕捉也有不少廉价的替代方案，把tango玩死后苹果又开始进军深度相机，unity官方就有一个用iphone前置深度相机录制面部表情动画的例子，除了精度和帧率比不如红外动捕外，剩下的就几乎都是优点。深度相机和一般相机的身体动作捕捉方案也有不少。但还是在精度和帧率上打不过红外动捕，这也正是红外动捕用户的最大需求。
+" />
+    
+    <meta name="author" content="Chaosikaros" />
+
+    
+    <meta property="og:title" content="Vicon动作捕捉系统评测" />
+    <meta property="twitter:title" content="Vicon动作捕捉系统评测" />
+    
+  <!-- Async font loading -->
+<script>
+  window.WebFontConfig = {
+      custom: {
+          families: ['Spoqa Han Sans:100,300,400,700'],
+          urls: ['https://spoqa.github.io/spoqa-han-sans/css/SpoqaHanSans-kr.css']
+      },
+      timeout: 60000
+  };
+  (function(d) {
+      var wf = d.createElement('script'), s = d.scripts[0];
+      wf.src = 'https://ajax.googleapis.com/ajax/libs/webfont/1.5.18/webfont.js';
+      s.parentNode.insertBefore(wf, s);
+  })(document);
+</script>
+
+  <!--[if lt IE 9]>
+    <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link rel="stylesheet" type="text/css" href="/blog/style.css" />
+  <link rel="alternate" type="application/rss+xml" title="Chaosikaros - Blog" href="/blog/feed.xml" />
+  <link rel="shortcut icon" href="https://raw.githubusercontent.com/Chaosikaros/blog/mine/images/favicon.png">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script src="https://kit.fontawesome.com/56f7faf3f4.js"></script>
+  <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+  <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+        inlineMath: [['$','$']]
+      }
+    });
+  </script>
+
+  <!-- Created with Jekyll Now - http://github.com/barryclark/jekyll-now -->
+
+</head>
+
+  <body>
+    <div class="wrapper-sidebar">
+  <header class="sidebar clearfix">
+    <div class="site-info">
+      
+        <a href="/blog/" class="site-avatar"><img src="https://raw.githubusercontent.com/Chaosikaros/blog/mine/images/logo.png" /></a>
+       
+      <h1 class="site-name"><a href="/blog/">Chaosikaros</a></h1>
+      <p class="site-description">Blog</p>
+    </div>
+  </header>
+
+  <div class="navlist">
+    <nav>
+      
+      
+      <a href="/blog/">首页</a>
+      
+      
+      
+      <a href="/blog/about">关于</a>
+      
+      
+      
+      <a href="/blog/archive">归档</a>
+      
+      
+      
+      <a href="/blog/tags">标签</a>
+      
+      
+    </nav>
+  </div>
+
+  <div class="wrapper-footer-desktop">
+    <footer class="footer">
+      <!-- Refer to https://codepen.io/ruandre/pen/howFi -->
+<ul class="svg-icon">
+
+  
+  
+  
+
+  
+
+  
+  <li><a href="mailto:chaosikaros@outlook.com" class="icon-8 email" title="Email"><svg viewBox="0 0 512 512"><path d="M502.3 190.8c3.9-3.1 9.7-.2 9.7 4.7V400c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V195.6c0-5 5.7-7.8 9.7-4.7 22.4 17.4 52.1 39.5 154.1 113.6 21.1 15.4 56.7 47.8 92.2 47.6 35.7.3 72-32.8 92.3-47.6 102-74.1 131.6-96.3 154-113.7zM256 320c23.2.4 56.6-29.2 73.4-41.4 132.7-96.3 142.8-104.7 173.4-128.7 5.8-4.5 9.2-11.5 9.2-18.9v-19c0-26.5-21.5-48-48-48H48C21.5 64 0 85.5 0 112v19c0 7.4 3.4 14.3 9.2 18.9 30.6 23.9 40.7 32.4 173.4 128.7 16.8 12.2 50.2 41.8 73.4 41.4z"/></svg><!--[if lt IE 9]><em>Email</em><![endif]--></a></li>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</ul>
+
+
+
+<p>Copyright (c) 2019</p>
+
+    </footer>
+  </div>
+</div>
+
+    
+      <aside class="toc">
+        <ul>
+  <li><a href="#">Vicon动作捕捉系统评测</a></li>
+</ul>
+      </aside>
+    
+
+    <div id="main" role="main" class="wrapper-content">
+      <div class="container">
+        <article class="posts">
+  <h1>Vicon动作捕捉系统评测</h1>
+
+  <div clsss="meta">
+    <span class="date">
+      2020-08-26
+    </span>
+
+    <ul class="tag">
+      
+      <li>
+        <a href="http://localhost:4000/blog/tags#动作捕捉">
+          动作捕捉
+        </a>
+      </li>
+      
+    </ul>
+  </div>
+
+  <div class="entry">
+    <p>今天有幸接触到了Vicon的一套动作捕捉系统，Vero V2.2。报价貌似三四十万，主要的硬件是八台红外动作捕捉相机，每一台都能买辆车了。参数如下。</p>
+
+<p>Parameters: Max HZ = 330, Max resolution = 2.2M pixels,</p>
+
+<p>Horizontal FOV = 98.1°, Vertical FOV = 50.1°.</p>
+
+<p>Min. number of cameras = 2.</p>
+
+<p>配了一个交换机，相机用带供电的网线和交换机连接再连到电脑上。</p>
+
+<p>原理看似很简单，就是把一些涂有反光材料的小球贴到被追踪物体上，相机镜头外有一圈红外LED，中间的红外相机就能看到小球反射的光。把画面发给电脑来计算位置，配置上要求独立显卡，那估计是用到显卡来运算了，也可能是配套软件要求独立显卡。听供应商的人讲，严格的暗室实验环境下精度能到0.01mm，一般使用好像只有0.xmm。</p>
+
+<p>这套系统的优点是高精度高帧率，和一系列配套的软件。</p>
+
+<p>Nexus: designed for life sciences: automated features, intelligent processing and flexible controls.</p>
+
+<p>Shōgun: designed for Visual effects (VFX). For media and entertainment applications.</p>
+
+<p>Evoke: designed for location based VR (LBVR).</p>
+
+<p>Tracker: designed for high precise tracking.</p>
+
+<p>ProCalc: visual application for creating custom kinematic models.</p>
+
+<p>Vicon Control: mobile app for system control and capture.</p>
+
+<p>Supported game engines: Unreal Engine, Unity3D and so on.</p>
+
+<p>Datastream SDK: for MATLAB, Labview, C++ and .Net.</p>
+
+<p>缺点除了垄断行业带来的虚高价格外（定位的塑料小球一个200元，某宝20），其他缺点也不少。首先是定位球多的话，因为遮挡而丢失的数据就会增加。官方的配套软件能在录制完后进行手动的数据补全，可以根据其他定位球的前后轨迹来计算被遮挡住的球的位置。</p>
+
+<p>定位球摆放上需要尽量摆成一个面，这样丢失点的话，容易计算。定位球有不同的大小，可以贴到嘴唇上读唇，也可以贴到身上，无人机上。软件上，主要的软件Nexus只支持windows，系统界面设计和建模软件差不多。</p>
+
+<p>供应商给看了很多例子，电影游戏动画，机器人，步态分析等等。看无人机例子的时候想到了网上tango的无人机定位应用，也很稳。但后来我用tango做小型无人车定位时却很容易遇到漂移，可能是因为我用的是阉割版。想起来最近有个依靠深度学习加点云避障的无人机看上去也很稳。红外定位球的动作捕捉，和这类点云SLAM的最大区别还是精度和帧率吧。红外定位球的摆放数量几乎不受限制，每台相机最远追踪距离是十米，而且可以摆放多个相机。小型化无需外置传感器的高精度定位还是有不少应用场景，比如最近几年的各种VR、MR一体机。如果这类定位技术能低成本量产，精度和帧率提上去的话，或许能取代红外动作捕捉的部分应用场景。</p>
+
+<p>当初采购的时候我还对比了一下Advanced Realtime Tracking的ARTTRACK5，做红外动作捕捉的还有别的公司，ART就是其中之一。不过ART的配置略逊一筹，软件支持上没有Vicon多，ART就只支持Unity，Vicon还支持虚幻。但这两个公司的定位上是有些差异的，Vicon给的应用例子大多还是电影游戏为主，说起动作捕捉，一般人可能也就只会想到电影和游戏吧。ART给了一些航空航天和汽车制造行业的例子。Vicon的工学例子大多是无人机和机器人。</p>
+
+<p>对于一般人来说，这套系统的最大用途可能是VR全身动作捕捉，这套系统的定位延迟据称是比一般的VR低。但成本还是太高了，Kinect也能做动作捕捉，价格可能只相当于Vicon的几个定位球。Kinect也能串联避免盲区，可是Kinect的大部分应用可能都没有支持串联。这套系统对于一般人来说最大的用途应该只是更精准的VR全身动作捕捉，高质量Vtuber。</p>
+
+<p>面部表情和身体动作捕捉也有不少廉价的替代方案，把tango玩死后苹果又开始进军深度相机，unity官方就有一个用iphone前置深度相机录制面部表情动画的例子，除了精度和帧率比不如红外动捕外，剩下的就几乎都是优点。深度相机和一般相机的身体动作捕捉方案也有不少。但还是在精度和帧率上打不过红外动捕，这也正是红外动捕用户的最大需求。</p>
+
+  </div>
+
+  
+  
+</article>
+
+<div class="pagination">
+  
+    <span class="prev" >
+      <a href="http://localhost:4000/blog/narcissu/">
+        ← 上一篇
+      </a>
+    </span>
+  
+  
+</div>
+      </div>
+    </div>
+
+    
+	<!-- Google Analytics -->
+	<script>
+		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+		ga('create', 'UA-153094429-1', 'auto');
+		ga('send', 'pageview', {
+		  'page': '/blog/motionTracking/',
+		  'title': 'Vicon动作捕捉系统评测'
+		});
+	</script>
+	<!-- End Google Analytics -->
+
+
+  </body>
+
+  
+  <script>
+    document.getElementById("main").classList.add("withtoc");
+  </script>
+  
+
+  <div class="wrapper-footer-mobile">
+    <footer class="footer">
+      <!-- Refer to https://codepen.io/ruandre/pen/howFi -->
+<ul class="svg-icon">
+
+  
+  
+  
+
+  
+
+  
+  <li><a href="mailto:chaosikaros@outlook.com" class="icon-8 email" title="Email"><svg viewBox="0 0 512 512"><path d="M502.3 190.8c3.9-3.1 9.7-.2 9.7 4.7V400c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V195.6c0-5 5.7-7.8 9.7-4.7 22.4 17.4 52.1 39.5 154.1 113.6 21.1 15.4 56.7 47.8 92.2 47.6 35.7.3 72-32.8 92.3-47.6 102-74.1 131.6-96.3 154-113.7zM256 320c23.2.4 56.6-29.2 73.4-41.4 132.7-96.3 142.8-104.7 173.4-128.7 5.8-4.5 9.2-11.5 9.2-18.9v-19c0-26.5-21.5-48-48-48H48C21.5 64 0 85.5 0 112v19c0 7.4 3.4 14.3 9.2 18.9 30.6 23.9 40.7 32.4 173.4 128.7 16.8 12.2 50.2 41.8 73.4 41.4z"/></svg><!--[if lt IE 9]><em>Email</em><![endif]--></a></li>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</ul>
+
+
+
+<p>Copyright (c) 2019</p>
+
+    </footer>
+
+
+</html>
