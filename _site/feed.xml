@@ -1,4 +1,187 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.0.0">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2020-08-26T17:17:21+08:00</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Chaosikaros</title><subtitle>Blog</subtitle><entry><title type="html">Vicon动作捕捉系统评测</title><link href="http://localhost:4000/blog/motionTracking/" rel="alternate" type="text/html" title="Vicon动作捕捉系统评测" /><published>2020-08-26T00:00:00+08:00</published><updated>2020-08-26T00:00:00+08:00</updated><id>http://localhost:4000/blog/motionTracking</id><content type="html" xml:base="http://localhost:4000/blog/motionTracking/">&lt;p&gt;今天有幸接触到了Vicon的一套动作捕捉系统，Vero V2.2。报价貌似三四十万，主要的硬件是八台红外动作捕捉相机，每一台都能买辆车了。参数如下。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.0.0">Jekyll</generator><link href="http://localhost:4000/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/blog/" rel="alternate" type="text/html" /><updated>2020-08-28T00:56:04+08:00</updated><id>http://localhost:4000/blog/feed.xml</id><title type="html">Chaosikaros</title><subtitle>Blog</subtitle><entry><title type="html">CUDA开发笔记—向量运算对比</title><link href="http://localhost:4000/blog/cuda/" rel="alternate" type="text/html" title="CUDA开发笔记---向量运算对比" /><published>2020-08-27T00:00:00+08:00</published><updated>2020-08-27T00:00:00+08:00</updated><id>http://localhost:4000/blog/cuda</id><content type="html" xml:base="http://localhost:4000/blog/cuda/">&lt;p&gt;最近开始学习CUDA。正式开始写代码前查了一些资料，对CUDA的印象就是擅长浮点数运算，缺点就是如果数据量不足够大，就不一定比CPU快。自己尝试了一些简单的对比后稍微有些理解了。&lt;/p&gt;
+
+&lt;p&gt;电脑配置：i7-670HQ，GTX970m，16G。&lt;/p&gt;
+
+&lt;p&gt;测试使用三个CUDA官方例子中的三维向量计算函数：&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kr&quot;&gt;inline&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__host__&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__device__&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;float3&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;normalize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;float3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;invLen&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rsqrtf&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dot&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;invLen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;kr&quot;&gt;inline&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__host__&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__device__&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;length&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;float3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sqrtf&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dot&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;kr&quot;&gt;inline&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__host__&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__device__&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;dot&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;float3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;float3&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;z&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;z&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;其中用到的其他函数是CUDA内置的sqrtf()和基于sqrtf()的rsqrtf()：平方根和平方根倒数&lt;/p&gt;
+
+&lt;div class=&quot;language-c++ highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;extern&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__CUDA_MATH_CRTIMP&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__DEVICE_FUNCTIONS_DECL__&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__device_builtin__&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;__cdecl&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sqrtf&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__THROW&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; 
+&lt;span class=&quot;kr&quot;&gt;inline&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;rsqrtf&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;float&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mf&quot;&gt;1.0&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sqrtf&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;输入： float3 a ：(99, 99, 99);
+            float3 b ：(999, 999, 999);&lt;/p&gt;
+
+&lt;p&gt;时间单位ms。&lt;/p&gt;
+
+&lt;p&gt;第一次测试：使用以上三个函数计算100万次：normalize(a); length(a-b); dot(a,b).&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt; &lt;/th&gt;
+      &lt;th&gt;normalize(a)&lt;/th&gt;
+      &lt;th&gt;length(a-b)&lt;/th&gt;
+      &lt;th&gt;dot(a,b)&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;CPU用时&lt;/td&gt;
+      &lt;td&gt;132&lt;/td&gt;
+      &lt;td&gt;141&lt;/td&gt;
+      &lt;td&gt;32&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;CUDA用时&lt;/td&gt;
+      &lt;td&gt;None&lt;/td&gt;
+      &lt;td&gt;None&lt;/td&gt;
+      &lt;td&gt;None&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;CUDA下直接爆内存卡死。可能是我的配置扛不住连续一百万次cudaMemcpy()。&lt;/p&gt;
+
+&lt;p&gt;第二次测试：换成100次。&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt; &lt;/th&gt;
+      &lt;th&gt;normalize(a)&lt;/th&gt;
+      &lt;th&gt;length(a-b)&lt;/th&gt;
+      &lt;th&gt;dot(a,b)&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;CPU用时&lt;/td&gt;
+      &lt;td&gt;0&lt;/td&gt;
+      &lt;td&gt;0&lt;/td&gt;
+      &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;CUDA用时&lt;/td&gt;
+      &lt;td&gt;109&lt;/td&gt;
+      &lt;td&gt;14&lt;/td&gt;
+      &lt;td&gt;16&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;结论：差距巨大，按照第一次测试的结果估算，这种情况下CPU比CUDA快5333倍。&lt;/p&gt;
+
+&lt;p&gt;第三次测试：把单独输入换成数组一次输入。以下是不同大小数组的结果。&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt; &lt;/th&gt;
+      &lt;th&gt;CPU nor&lt;/th&gt;
+      &lt;th&gt;CUDA nor&lt;/th&gt;
+      &lt;th&gt;CPU len&lt;/th&gt;
+      &lt;th&gt;CUDA len&lt;/th&gt;
+      &lt;th&gt;CPU dot&lt;/th&gt;
+      &lt;th&gt;CUDA dot&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;100&lt;/td&gt;
+      &lt;td&gt;0&lt;/td&gt;
+      &lt;td&gt;1&lt;/td&gt;
+      &lt;td&gt;0&lt;/td&gt;
+      &lt;td&gt;0&lt;/td&gt;
+      &lt;td&gt;0&lt;/td&gt;
+      &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;1000&lt;/td&gt;
+      &lt;td&gt;0&lt;/td&gt;
+      &lt;td&gt;1&lt;/td&gt;
+      &lt;td&gt;0&lt;/td&gt;
+      &lt;td&gt;0&lt;/td&gt;
+      &lt;td&gt;0&lt;/td&gt;
+      &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;10000&lt;/td&gt;
+      &lt;td&gt;1&lt;/td&gt;
+      &lt;td&gt;2&lt;/td&gt;
+      &lt;td&gt;1&lt;/td&gt;
+      &lt;td&gt;2&lt;/td&gt;
+      &lt;td&gt;0&lt;/td&gt;
+      &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;100000&lt;/td&gt;
+      &lt;td&gt;14&lt;/td&gt;
+      &lt;td&gt;21&lt;/td&gt;
+      &lt;td&gt;14&lt;/td&gt;
+      &lt;td&gt;11&lt;/td&gt;
+      &lt;td&gt;3&lt;/td&gt;
+      &lt;td&gt;13&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;1000000&lt;/td&gt;
+      &lt;td&gt;139&lt;/td&gt;
+      &lt;td&gt;143&lt;/td&gt;
+      &lt;td&gt;146&lt;/td&gt;
+      &lt;td&gt;103&lt;/td&gt;
+      &lt;td&gt;34&lt;/td&gt;
+      &lt;td&gt;107&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;10000000&lt;/td&gt;
+      &lt;td&gt;1395&lt;/td&gt;
+      &lt;td&gt;1455&lt;/td&gt;
+      &lt;td&gt;1460&lt;/td&gt;
+      &lt;td&gt;1064&lt;/td&gt;
+      &lt;td&gt;361&lt;/td&gt;
+      &lt;td&gt;1056&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;100000000&lt;/td&gt;
+      &lt;td&gt;14254&lt;/td&gt;
+      &lt;td&gt;17737&lt;/td&gt;
+      &lt;td&gt;14661&lt;/td&gt;
+      &lt;td&gt;14809&lt;/td&gt;
+      &lt;td&gt;3420&lt;/td&gt;
+      &lt;td&gt;10722&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;这次的结果就有意思了。10000长度以下差别不是很大，10万次以上CUDA的length(a-b)明显比CPU快，但其他的还是比不过CPU。一亿次时爆了内存，程序卡了，CUDA的length(a-b)优势也因为爆内存而消失了。&lt;/p&gt;
+
+&lt;p&gt;这就说明了CUDA的好几个特点。首先是输入量大的时候，把大量变量一起传给CUDA运算会比单个传快得多，因为单个传只用了CUDA的一个线程。在数据运算量不大的时候，CUDA和CPU差距也不大，甚至CPU还全面赶超CUDA。当数据量足够大时，CUDA的length(a-b)比CPU快了差不多一半，但其他的还是慢。&lt;/p&gt;
+
+&lt;p&gt;从函数上看，比dot的话，整数运算CUDA总是比CPU慢。 length函数中也是调用了dot，只不过是dot的两个输入相同。CUDA算dot应该比CPU慢，可是sqrtf()让CPU的length比它自己的dot运算慢了差不多四倍。输入a，b与a-b的量级差不多，所以差别就体现在sqrtf()上。CUDA的length就和它的dot差不多，应该是因为CUDA擅长浮点数运算，所以它的length就比CPU的快。&lt;/p&gt;
+
+&lt;p&gt;可是刚刚的结论似乎没法解释normalize上CUDA和CPU差距不是很大的事实。normalize只是比length多了一个倒数和乘法运算。理论上应该和length差不多，实际却比length慢一半。换个角度，对比两者的dot和normalize，CUDA的这两个运算差距不是很大，normalize只比dot慢了一半。而CPU的normalize几乎用了它dot的四倍时间。其中的差异应该还是rsqrtf()的sqrtf()造成的。&lt;/p&gt;
+
+&lt;p&gt;试了试嵌套调用normalize，第一次嵌套就比CPU快了一点。CPU/CUDA的时间比随着嵌套次数开始增加，1.04，1.07，1.18，1.13，1.17。normalize嵌套意义可能不大，因为嵌套之后每次运算过程都一样。&lt;/p&gt;
+
+&lt;p&gt;以上结果都没有取平均值，不过还是能得出一些初步的结论。比如在牵扯到输入量巨大的浮点数运算时，CUDA才会展现出优势。&lt;/p&gt;</content><author><name></name></author><category term="CUDA" /><summary type="html">最近开始学习CUDA。正式开始写代码前查了一些资料，对CUDA的印象就是擅长浮点数运算，缺点就是如果数据量不足够大，就不一定比CPU快。自己尝试了一些简单的对比后稍微有些理解了。 电脑配置：i7-670HQ，GTX970m，16G。 测试使用三个CUDA官方例子中的三维向量计算函数： inline __host__ __device__ float3 normalize(float3 v) { float invLen = rsqrtf(dot(v, v)); return v * invLen; } inline __host__ __device__ float length(float3 v) { return sqrtf(dot(v, v)); } inline __host__ __device__ float dot(float3 a, float3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; } 其中用到的其他函数是CUDA内置的sqrtf()和基于sqrtf()的rsqrtf()：平方根和平方根倒数 extern __CUDA_MATH_CRTIMP __DEVICE_FUNCTIONS_DECL__ __device_builtin__ float __cdecl sqrtf(float) __THROW; inline float rsqrtf(float x) { return 1.0f / sqrtf(x); } 输入： float3 a ：(99, 99, 99); float3 b ：(999, 999, 999); 时间单位ms。 第一次测试：使用以上三个函数计算100万次：normalize(a); length(a-b); dot(a,b).   normalize(a) length(a-b) dot(a,b) CPU用时 132 141 32 CUDA用时 None None None CUDA下直接爆内存卡死。可能是我的配置扛不住连续一百万次cudaMemcpy()。 第二次测试：换成100次。   normalize(a) length(a-b) dot(a,b) CPU用时 0 0 0 CUDA用时 109 14 16 结论：差距巨大，按照第一次测试的结果估算，这种情况下CPU比CUDA快5333倍。 第三次测试：把单独输入换成数组一次输入。以下是不同大小数组的结果。   CPU nor CUDA nor CPU len CUDA len CPU dot CUDA dot 100 0 1 0 0 0 0 1000 0 1 0 0 0 0 10000 1 2 1 2 0 1 100000 14 21 14 11 3 13 1000000 139 143 146 103 34 107 10000000 1395 1455 1460 1064 361 1056 100000000 14254 17737 14661 14809 3420 10722 这次的结果就有意思了。10000长度以下差别不是很大，10万次以上CUDA的length(a-b)明显比CPU快，但其他的还是比不过CPU。一亿次时爆了内存，程序卡了，CUDA的length(a-b)优势也因为爆内存而消失了。 这就说明了CUDA的好几个特点。首先是输入量大的时候，把大量变量一起传给CUDA运算会比单个传快得多，因为单个传只用了CUDA的一个线程。在数据运算量不大的时候，CUDA和CPU差距也不大，甚至CPU还全面赶超CUDA。当数据量足够大时，CUDA的length(a-b)比CPU快了差不多一半，但其他的还是慢。 从函数上看，比dot的话，整数运算CUDA总是比CPU慢。 length函数中也是调用了dot，只不过是dot的两个输入相同。CUDA算dot应该比CPU慢，可是sqrtf()让CPU的length比它自己的dot运算慢了差不多四倍。输入a，b与a-b的量级差不多，所以差别就体现在sqrtf()上。CUDA的length就和它的dot差不多，应该是因为CUDA擅长浮点数运算，所以它的length就比CPU的快。 可是刚刚的结论似乎没法解释normalize上CUDA和CPU差距不是很大的事实。normalize只是比length多了一个倒数和乘法运算。理论上应该和length差不多，实际却比length慢一半。换个角度，对比两者的dot和normalize，CUDA的这两个运算差距不是很大，normalize只比dot慢了一半。而CPU的normalize几乎用了它dot的四倍时间。其中的差异应该还是rsqrtf()的sqrtf()造成的。 试了试嵌套调用normalize，第一次嵌套就比CPU快了一点。CPU/CUDA的时间比随着嵌套次数开始增加，1.04，1.07，1.18，1.13，1.17。normalize嵌套意义可能不大，因为嵌套之后每次运算过程都一样。 以上结果都没有取平均值，不过还是能得出一些初步的结论。比如在牵扯到输入量巨大的浮点数运算时，CUDA才会展现出优势。</summary></entry><entry><title type="html">Vicon动作捕捉系统评测</title><link href="http://localhost:4000/blog/motionTracking/" rel="alternate" type="text/html" title="Vicon动作捕捉系统评测" /><published>2020-08-26T00:00:00+08:00</published><updated>2020-08-26T00:00:00+08:00</updated><id>http://localhost:4000/blog/motionTracking</id><content type="html" xml:base="http://localhost:4000/blog/motionTracking/">&lt;p&gt;今天有幸接触到了Vicon的一套动作捕捉系统，Vero V2.2。报价貌似三四十万，主要的硬件是八台红外动作捕捉相机，每一台都能买辆车了。参数如下。&lt;/p&gt;
 
 &lt;p&gt;Parameters: Max HZ = 330, Max resolution = 2.2M pixels,&lt;/p&gt;
 

@@ -1,0 +1,186 @@
+I"/!<p>最近开始学习CUDA。正式开始写代码前查了一些资料，对CUDA的印象就是擅长浮点数运算，缺点就是如果数据量不足够大，就不一定比CPU快。自己尝试了一些简单的对比后稍微有些理解了。</p>
+
+<p>电脑配置：i7-670HQ，GTX970m，16G。</p>
+
+<p>测试使用三个CUDA官方例子中的三维向量计算函数：</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">inline</span> <span class="n">__host__</span> <span class="n">__device__</span> <span class="n">float3</span> <span class="nf">normalize</span><span class="p">(</span><span class="n">float3</span> <span class="n">v</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">float</span> <span class="n">invLen</span> <span class="o">=</span> <span class="n">rsqrtf</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">v</span><span class="p">));</span>
+    <span class="k">return</span> <span class="n">v</span> <span class="o">*</span> <span class="n">invLen</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="kr">inline</span> <span class="n">__host__</span> <span class="n">__device__</span> <span class="kt">float</span> <span class="nf">length</span><span class="p">(</span><span class="n">float3</span> <span class="n">v</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="n">sqrtf</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">v</span><span class="p">));</span>
+<span class="p">}</span>
+<span class="kr">inline</span> <span class="n">__host__</span> <span class="n">__device__</span> <span class="kt">float</span> <span class="nf">dot</span><span class="p">(</span><span class="n">float3</span> <span class="n">a</span><span class="p">,</span> <span class="n">float3</span> <span class="n">b</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="n">a</span><span class="p">.</span><span class="n">x</span> <span class="o">*</span> <span class="n">b</span><span class="p">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">a</span><span class="p">.</span><span class="n">y</span> <span class="o">*</span> <span class="n">b</span><span class="p">.</span><span class="n">y</span> <span class="o">+</span> <span class="n">a</span><span class="p">.</span><span class="n">z</span> <span class="o">*</span> <span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>其中用到的其他函数是CUDA内置的sqrtf()和基于sqrtf()的rsqrtf()：平方根和平方根倒数</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">extern</span> <span class="n">__CUDA_MATH_CRTIMP</span> <span class="n">__DEVICE_FUNCTIONS_DECL__</span> <span class="n">__device_builtin__</span> <span class="kt">float</span> <span class="kr">__cdecl</span> <span class="n">sqrtf</span><span class="p">(</span><span class="kt">float</span><span class="p">)</span> <span class="n">__THROW</span><span class="p">;</span> 
+<span class="kr">inline</span> <span class="kt">float</span> <span class="nf">rsqrtf</span><span class="p">(</span><span class="kt">float</span> <span class="n">x</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="mf">1.0</span><span class="n">f</span> <span class="o">/</span> <span class="n">sqrtf</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>输入： float3 a ：(99, 99, 99);
+            float3 b ：(999, 999, 999);</p>
+
+<p>时间单位ms。</p>
+
+<p>第一次测试：使用以上三个函数计算100万次：normalize(a); length(a-b); dot(a,b).</p>
+
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th>normalize(a)</th>
+      <th>length(a-b)</th>
+      <th>dot(a,b)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>CPU用时</td>
+      <td>132</td>
+      <td>141</td>
+      <td>32</td>
+    </tr>
+    <tr>
+      <td>CUDA用时</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>CUDA下直接爆内存卡死。可能是我的配置扛不住连续一百万次cudaMemcpy()。</p>
+
+<p>第二次测试：换成100次。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th>normalize(a)</th>
+      <th>length(a-b)</th>
+      <th>dot(a,b)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>CPU用时</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>CUDA用时</td>
+      <td>109</td>
+      <td>14</td>
+      <td>16</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>结论：差距巨大，按照第一次测试的结果估算，这种情况下CPU比CUDA快5333倍。</p>
+
+<p>第三次测试：把单独输入换成数组一次输入。以下是不同大小数组的结果。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th>CPU nor</th>
+      <th>CUDA nor</th>
+      <th>CPU len</th>
+      <th>CUDA len</th>
+      <th>CPU dot</th>
+      <th>CUDA dot</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>100</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>1000</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>10000</td>
+      <td>1</td>
+      <td>2</td>
+      <td>1</td>
+      <td>2</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>100000</td>
+      <td>14</td>
+      <td>21</td>
+      <td>14</td>
+      <td>11</td>
+      <td>3</td>
+      <td>13</td>
+    </tr>
+    <tr>
+      <td>1000000</td>
+      <td>139</td>
+      <td>143</td>
+      <td>146</td>
+      <td>103</td>
+      <td>34</td>
+      <td>107</td>
+    </tr>
+    <tr>
+      <td>10000000</td>
+      <td>1395</td>
+      <td>1455</td>
+      <td>1460</td>
+      <td>1064</td>
+      <td>361</td>
+      <td>1056</td>
+    </tr>
+    <tr>
+      <td>100000000</td>
+      <td>14254</td>
+      <td>17737</td>
+      <td>14661</td>
+      <td>14809</td>
+      <td>3420</td>
+      <td>10722</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>这次的结果就有意思了。10000长度以下差别不是很大，10万次以上CUDA的length(a-b)明显比CPU快，但其他的还是比不过CPU。一亿次时爆了内存，程序卡了，CUDA的length(a-b)优势也因为爆内存而消失了。</p>
+
+<p>这就说明了CUDA的好几个特点。首先是输入量大的时候，把大量变量一起传给CUDA运算会比单个传快得多，因为单个传只用了CUDA的一个线程。在数据运算量不大的时候，CUDA和CPU差距也不大，甚至CPU还全面赶超CUDA。当数据量足够大时，CUDA的length(a-b)比CPU快了差不多一半，但其他的还是慢。</p>
+
+<p>从函数上看，比dot的话，整数运算CUDA总是比CPU慢。 length函数中也是调用了dot，只不过是dot的两个输入相同。CUDA算dot应该比CPU慢，可是sqrtf()让CPU的length比它自己的dot运算慢了差不多四倍。输入a，b与a-b的量级差不多，所以差别就体现在sqrtf()上。CUDA的length就和它的dot差不多，应该是因为CUDA擅长浮点数运算，所以它的length就比CPU的快。</p>
+
+<p>可是刚刚的结论似乎没法解释normalize上CUDA和CPU差距不是很大的事实。normalize只是比length多了一个倒数和乘法运算。理论上应该和length差不多，实际却比length慢一半。换个角度，对比两者的dot和normalize，CUDA的这两个运算差距不是很大，normalize只比dot慢了一半。而CPU的normalize几乎用了它dot的四倍时间。其中的差异应该还是rsqrtf()的sqrtf()造成的。</p>
+
+<p>试了试嵌套调用normalize，第一次嵌套就比CPU快了一点。CPU/CUDA的时间比随着嵌套次数开始增加，1.04，1.07，1.18，1.13，1.17。normalize嵌套意义可能不大，因为嵌套之后每次运算过程都一样。</p>
+
+<p>以上结果都没有取平均值，不过还是能得出一些初步的结论。比如在牵扯到输入量巨大的浮点数运算时，CUDA才会展现出优势。</p>
+
+:ET
