@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-  <title>CUDA开发笔记---Marching cubes算法的CUDA与Compute Shader实现 – Chaosikaros – Blog</title>
+  <title>CUDA开发笔记---向量运算对比 – Chaosikaros – Blog</title>
 
       <meta charset="utf-8" />
     <meta content='text/html; charset=utf-8' http-equiv='Content-Type'>
@@ -9,84 +9,384 @@
     <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0'>
 
     
-    <meta name="description" content="最近一直都在学习CUDA，网上没有很好的教程，把官方的例子吃透应该就可以了。CUDA的官方例子中我最感兴趣的就是Marching cubes （MC）算法的实现。
+    <meta name="description" content="最近开始学习CUDA。正式开始写代码前查了一些资料，对CUDA的印象就是擅长浮点数运算，缺点就是如果数据量不足够大，就不一定比CPU快。自己尝试了一些简单的对比后稍微有些理解了。
 
-http://paulbourke.net/geometry/polygonise/
+电脑配置：i7-6700HQ，GTX970m，16G。
 
-关于MC算法，可以看这个网页的介绍。从开始学CUDA的那一天起我就在思考CUDA和Compute Shader（CS）的主要差别是什么。一开始经过一番搜索，学习了CS的入门程序后，我的理解是线程差别。CUDA和CS的线程很类似，都是三维的，而且用法上似乎也差不多。
+测试使用三个CUDA官方例子中的三维向量计算函数：
 
-https://docs.microsoft.com/zh-cn/windows/win32/direct3dhlsl/sm5-attributes-numthreads?redirectedfrom=MSDN
+inline __host__ __device__ float3 normalize(float3 v)
+{
+    float invLen = rsqrtf(dot(v, v));
+    return v * invLen;
+}
+inline __host__ __device__ float length(float3 v)
+{
+    return sqrtf(dot(v, v));
+}
+inline __host__ __device__ float dot(float3 a, float3 b)
+{
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
 
-https://docs.microsoft.com/en-us/windows/win32/direct3d11/direct3d-11-advanced-stages-compute-shader
+其中用到的其他函数是CUDA内置的sqrtf()和基于sqrtf()的rsqrtf()：平方根和平方根倒数
 
-官方文档说CS5.0下Maximum Threads (X ×Y ×Z) = 1024， Maximum Z = 64。每个dispatch最大维度能有65535。
+extern __CUDA_MATH_CRTIMP __DEVICE_FUNCTIONS_DECL__ __device_builtin__ float __cdecl sqrtf(float) __THROW; 
+inline float rsqrtf(float x)
+{
+    return 1.0f / sqrtf(x);
+}
 
-1280 CUDA Cores
 
-Maximum number of threads per multiprocessor: 2048
+输入： float3 a ：(99, 99, 99);
+            float3 b ：(999, 999, 999);
 
-Maximum number of threads per block: 1024
+时间单位ms。
 
-Max dimension size of a thread block (x,y,z): (1024, 1024, 64)
+第一次测试：使用以上三个函数计算100万次：normalize(a); length(a-b); dot(a,b).
 
-Max dimension size of a grid size  (x,y,z): (2147483647, 65535, 65535)
 
-我GTX970M的CUDA参数是这样。乍一看CUDA的线程数量似乎更多，不过具体也不清楚。
+  
+    
+       
+      normalize(a)
+      length(a-b)
+      dot(a,b)
+    
+  
+  
+    
+      CPU用时
+      132
+      141
+      32
+    
+    
+      CUDA用时
+      None
+      None
+      None
+    
+  
 
-https://github.com/Wenzy–/Marching-cube-in-Unity
 
-随后花了几天时间把一个CS的Marching cubes例子完全移植到了CUDA里，过程很复杂，而且效果不如CS，就不赘述了。直接讲结果。
+CUDA下直接爆内存卡死。可能是我的配置扛不住连续一百万次cudaMemcpy()。
 
-CS的这个MC例子最大能运算175 ×175 ×175的体素数据，再大就会超过65535这个限制。在175尺寸下，最大纯MC部分延迟也不到200ms，可以说是非常恐怖了。
+第二次测试：换成100次。
 
-我一开始按照这个CS版MC的逻辑自己做了移植版，速度比CS版慢了几十倍。因为我是初学CUDA，不知道怎么高效做三维坐标索引，所以一开始用的cudaPitchedPtr。这个跑起来很慢，所以我就开始看官方例子。官方用的是基于二进制运算的三维索引，但索引范围的边长只能是16到128。除此外还用了thrust库对输入的体素数据进行基于Prefix sum的空体素剔除。但这一步算法在我测试的时候发现并不会加快速度，去掉反而会更快所以我就去掉了。官方版速度还可以，大概只比CS版慢了十倍。实际数据的话，同样的noise体素输入，同样的128边长，都是三十多万三角形，CS版一帧需要总时间大概200ms, 纯MC部分66ms。CUDA下总时间1270ms，纯MC部分953ms。纯MC之外就是获取和更新三角形法向量数据。在同一个应用下，先不说CS版是不是最优，CUDA这边连官方优化的例子都被CS吊着打。不过跟我自己实现的初版CUDA MC比起来还是快多了。
 
-期间发现一个细节，或许就能说明CUDA和CS的差别。我在移植法向量平滑时出了问题，想把法向量平滑放到Shader这边完成，结果查了好久后发现Shader这边不能计算法向量平滑，因为无法在顶点函数里访问相邻的三角形数据。这可能就是CS诞生的初衷之一，也是CUDA的优势之一。CUDA更接近于常用的编程语言，虽然部分应用场景不如CS，但在拓展性上比CS强。HLSL语法是类C的，CUDA也有自己的数学库，float3，float4类型和运算都和HLSL下差不多，可以说CUDA就是把kernel镶嵌在C++里，而HLSL是单独拿出来。不过Shader语言好像都差不多。
+  
+    
+       
+      normalize(a)
+      length(a-b)
+      dot(a,b)
+    
+  
+  
+    
+      CPU用时
+      0
+      0
+      0
+    
+    
+      CUDA用时
+      109
+      14
+      16
+    
+  
 
-CUDA和CS都是为了解决复杂计算的并行运算方案，单从目的上看似乎和Hadoop之类分布式运算的平台差不多。不过Hadoop是java语言，比C++和类C语言好用多了。貌似也有结合GPU运算和分布式架构的平台，以后接触到了再说吧。
+
+结论：差距巨大，按照第一次测试的结果估算，这种情况下CPU比CUDA快5333倍。
+
+第三次测试：把单独输入换成数组一次输入。以下是不同大小数组的结果。
+
+
+  
+    
+       
+      CPU nor
+      CUDA nor
+      CPU len
+      CUDA len
+      CPU dot
+      CUDA dot
+    
+  
+  
+    
+      100
+      0
+      1
+      0
+      0
+      0
+      0
+    
+    
+      1000
+      0
+      1
+      0
+      0
+      0
+      0
+    
+    
+      10000
+      1
+      2
+      1
+      2
+      0
+      1
+    
+    
+      100000
+      14
+      21
+      14
+      11
+      3
+      13
+    
+    
+      1000000
+      139
+      143
+      146
+      103
+      34
+      107
+    
+    
+      10000000
+      1395
+      1455
+      1460
+      1064
+      361
+      1056
+    
+    
+      100000000
+      14254
+      17737
+      14661
+      14809
+      3420
+      10722
+    
+  
+
+
+这次的结果就有意思了。10000长度以下差别不是很大，10万次以上CUDA的length(a-b)明显比CPU快，但其他的还是比不过CPU。一亿次时爆了内存，程序卡了，CUDA的length(a-b)优势也因为爆内存而消失了。
+
+这就说明了CUDA的好几个特点。首先是输入量大的时候，把大量变量一起传给CUDA运算会比单个传快得多，因为单个传只用了CUDA的一个线程。在数据运算量不大的时候，CUDA和CPU差距也不大，甚至CPU还全面赶超CUDA。当数据量足够大时，CUDA的length(a-b)比CPU快了差不多一半，但其他的还是慢。
+
+从函数上看，比dot的话，整数运算CUDA总是比CPU慢。 length函数中也是调用了dot，只不过是dot的两个输入相同。CUDA算dot应该比CPU慢，可是sqrtf()让CPU的length比它自己的dot运算慢了差不多四倍。输入a，b与a-b的量级差不多，所以差别就体现在sqrtf()上。CUDA的length就和它的dot差不多，应该是因为CUDA擅长浮点数运算，所以它的length就比CPU的快。
+
+可是刚刚的结论似乎没法解释normalize上CUDA和CPU差距不是很大的事实。normalize只是比length多了一个倒数和乘法运算。理论上应该和length差不多，实际却比length慢一半。换个角度，对比两者的dot和normalize，CUDA的这两个运算差距不是很大，normalize只比dot慢了一半。而CPU的normalize几乎用了它dot的四倍时间。其中的差异应该还是rsqrtf()的sqrtf()造成的。
+
+试了试嵌套调用normalize，第一次嵌套就比CPU快了一点。CPU/CUDA的时间比随着嵌套次数开始增加，1.04，1.07，1.18，1.13，1.17。normalize嵌套意义可能不大，因为嵌套之后每次运算过程都一样。
+
+以上结果都没有取平均值，不过还是能得出一些初步的结论。比如在牵扯到输入量巨大的浮点数运算时，CUDA才会展现出优势。
+
 " />
-    <meta property="og:description" content="最近一直都在学习CUDA，网上没有很好的教程，把官方的例子吃透应该就可以了。CUDA的官方例子中我最感兴趣的就是Marching cubes （MC）算法的实现。
+    <meta property="og:description" content="最近开始学习CUDA。正式开始写代码前查了一些资料，对CUDA的印象就是擅长浮点数运算，缺点就是如果数据量不足够大，就不一定比CPU快。自己尝试了一些简单的对比后稍微有些理解了。
 
-http://paulbourke.net/geometry/polygonise/
+电脑配置：i7-6700HQ，GTX970m，16G。
 
-关于MC算法，可以看这个网页的介绍。从开始学CUDA的那一天起我就在思考CUDA和Compute Shader（CS）的主要差别是什么。一开始经过一番搜索，学习了CS的入门程序后，我的理解是线程差别。CUDA和CS的线程很类似，都是三维的，而且用法上似乎也差不多。
+测试使用三个CUDA官方例子中的三维向量计算函数：
 
-https://docs.microsoft.com/zh-cn/windows/win32/direct3dhlsl/sm5-attributes-numthreads?redirectedfrom=MSDN
+inline __host__ __device__ float3 normalize(float3 v)
+{
+    float invLen = rsqrtf(dot(v, v));
+    return v * invLen;
+}
+inline __host__ __device__ float length(float3 v)
+{
+    return sqrtf(dot(v, v));
+}
+inline __host__ __device__ float dot(float3 a, float3 b)
+{
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
 
-https://docs.microsoft.com/en-us/windows/win32/direct3d11/direct3d-11-advanced-stages-compute-shader
+其中用到的其他函数是CUDA内置的sqrtf()和基于sqrtf()的rsqrtf()：平方根和平方根倒数
 
-官方文档说CS5.0下Maximum Threads (X ×Y ×Z) = 1024， Maximum Z = 64。每个dispatch最大维度能有65535。
+extern __CUDA_MATH_CRTIMP __DEVICE_FUNCTIONS_DECL__ __device_builtin__ float __cdecl sqrtf(float) __THROW; 
+inline float rsqrtf(float x)
+{
+    return 1.0f / sqrtf(x);
+}
 
-1280 CUDA Cores
 
-Maximum number of threads per multiprocessor: 2048
+输入： float3 a ：(99, 99, 99);
+            float3 b ：(999, 999, 999);
 
-Maximum number of threads per block: 1024
+时间单位ms。
 
-Max dimension size of a thread block (x,y,z): (1024, 1024, 64)
+第一次测试：使用以上三个函数计算100万次：normalize(a); length(a-b); dot(a,b).
 
-Max dimension size of a grid size  (x,y,z): (2147483647, 65535, 65535)
 
-我GTX970M的CUDA参数是这样。乍一看CUDA的线程数量似乎更多，不过具体也不清楚。
+  
+    
+       
+      normalize(a)
+      length(a-b)
+      dot(a,b)
+    
+  
+  
+    
+      CPU用时
+      132
+      141
+      32
+    
+    
+      CUDA用时
+      None
+      None
+      None
+    
+  
 
-https://github.com/Wenzy–/Marching-cube-in-Unity
 
-随后花了几天时间把一个CS的Marching cubes例子完全移植到了CUDA里，过程很复杂，而且效果不如CS，就不赘述了。直接讲结果。
+CUDA下直接爆内存卡死。可能是我的配置扛不住连续一百万次cudaMemcpy()。
 
-CS的这个MC例子最大能运算175 ×175 ×175的体素数据，再大就会超过65535这个限制。在175尺寸下，最大纯MC部分延迟也不到200ms，可以说是非常恐怖了。
+第二次测试：换成100次。
 
-我一开始按照这个CS版MC的逻辑自己做了移植版，速度比CS版慢了几十倍。因为我是初学CUDA，不知道怎么高效做三维坐标索引，所以一开始用的cudaPitchedPtr。这个跑起来很慢，所以我就开始看官方例子。官方用的是基于二进制运算的三维索引，但索引范围的边长只能是16到128。除此外还用了thrust库对输入的体素数据进行基于Prefix sum的空体素剔除。但这一步算法在我测试的时候发现并不会加快速度，去掉反而会更快所以我就去掉了。官方版速度还可以，大概只比CS版慢了十倍。实际数据的话，同样的noise体素输入，同样的128边长，都是三十多万三角形，CS版一帧需要总时间大概200ms, 纯MC部分66ms。CUDA下总时间1270ms，纯MC部分953ms。纯MC之外就是获取和更新三角形法向量数据。在同一个应用下，先不说CS版是不是最优，CUDA这边连官方优化的例子都被CS吊着打。不过跟我自己实现的初版CUDA MC比起来还是快多了。
 
-期间发现一个细节，或许就能说明CUDA和CS的差别。我在移植法向量平滑时出了问题，想把法向量平滑放到Shader这边完成，结果查了好久后发现Shader这边不能计算法向量平滑，因为无法在顶点函数里访问相邻的三角形数据。这可能就是CS诞生的初衷之一，也是CUDA的优势之一。CUDA更接近于常用的编程语言，虽然部分应用场景不如CS，但在拓展性上比CS强。HLSL语法是类C的，CUDA也有自己的数学库，float3，float4类型和运算都和HLSL下差不多，可以说CUDA就是把kernel镶嵌在C++里，而HLSL是单独拿出来。不过Shader语言好像都差不多。
+  
+    
+       
+      normalize(a)
+      length(a-b)
+      dot(a,b)
+    
+  
+  
+    
+      CPU用时
+      0
+      0
+      0
+    
+    
+      CUDA用时
+      109
+      14
+      16
+    
+  
 
-CUDA和CS都是为了解决复杂计算的并行运算方案，单从目的上看似乎和Hadoop之类分布式运算的平台差不多。不过Hadoop是java语言，比C++和类C语言好用多了。貌似也有结合GPU运算和分布式架构的平台，以后接触到了再说吧。
+
+结论：差距巨大，按照第一次测试的结果估算，这种情况下CPU比CUDA快5333倍。
+
+第三次测试：把单独输入换成数组一次输入。以下是不同大小数组的结果。
+
+
+  
+    
+       
+      CPU nor
+      CUDA nor
+      CPU len
+      CUDA len
+      CPU dot
+      CUDA dot
+    
+  
+  
+    
+      100
+      0
+      1
+      0
+      0
+      0
+      0
+    
+    
+      1000
+      0
+      1
+      0
+      0
+      0
+      0
+    
+    
+      10000
+      1
+      2
+      1
+      2
+      0
+      1
+    
+    
+      100000
+      14
+      21
+      14
+      11
+      3
+      13
+    
+    
+      1000000
+      139
+      143
+      146
+      103
+      34
+      107
+    
+    
+      10000000
+      1395
+      1455
+      1460
+      1064
+      361
+      1056
+    
+    
+      100000000
+      14254
+      17737
+      14661
+      14809
+      3420
+      10722
+    
+  
+
+
+这次的结果就有意思了。10000长度以下差别不是很大，10万次以上CUDA的length(a-b)明显比CPU快，但其他的还是比不过CPU。一亿次时爆了内存，程序卡了，CUDA的length(a-b)优势也因为爆内存而消失了。
+
+这就说明了CUDA的好几个特点。首先是输入量大的时候，把大量变量一起传给CUDA运算会比单个传快得多，因为单个传只用了CUDA的一个线程。在数据运算量不大的时候，CUDA和CPU差距也不大，甚至CPU还全面赶超CUDA。当数据量足够大时，CUDA的length(a-b)比CPU快了差不多一半，但其他的还是慢。
+
+从函数上看，比dot的话，整数运算CUDA总是比CPU慢。 length函数中也是调用了dot，只不过是dot的两个输入相同。CUDA算dot应该比CPU慢，可是sqrtf()让CPU的length比它自己的dot运算慢了差不多四倍。输入a，b与a-b的量级差不多，所以差别就体现在sqrtf()上。CUDA的length就和它的dot差不多，应该是因为CUDA擅长浮点数运算，所以它的length就比CPU的快。
+
+可是刚刚的结论似乎没法解释normalize上CUDA和CPU差距不是很大的事实。normalize只是比length多了一个倒数和乘法运算。理论上应该和length差不多，实际却比length慢一半。换个角度，对比两者的dot和normalize，CUDA的这两个运算差距不是很大，normalize只比dot慢了一半。而CPU的normalize几乎用了它dot的四倍时间。其中的差异应该还是rsqrtf()的sqrtf()造成的。
+
+试了试嵌套调用normalize，第一次嵌套就比CPU快了一点。CPU/CUDA的时间比随着嵌套次数开始增加，1.04，1.07，1.18，1.13，1.17。normalize嵌套意义可能不大，因为嵌套之后每次运算过程都一样。
+
+以上结果都没有取平均值，不过还是能得出一些初步的结论。比如在牵扯到输入量巨大的浮点数运算时，CUDA才会展现出优势。
+
 " />
     
     <meta name="author" content="Chaosikaros" />
 
     
-    <meta property="og:title" content="CUDA开发笔记---Marching cubes算法的CUDA与Compute Shader实现" />
-    <meta property="twitter:title" content="CUDA开发笔记---Marching cubes算法的CUDA与Compute Shader实现" />
+    <meta property="og:title" content="CUDA开发笔记---向量运算对比" />
+    <meta property="twitter:title" content="CUDA开发笔记---向量运算对比" />
     
   <!-- Async font loading -->
 <script>
@@ -211,7 +511,7 @@ CUDA和CS都是为了解决复杂计算的并行运算方案，单从目的上�
     
       <aside class="toc">
         <ul>
-  <li><a href="#">CUDA开发笔记—Marching cubes算法的CUDA与Compute Shader实现</a></li>
+  <li><a href="#">CUDA开发笔记—向量运算对比</a></li>
 </ul>
       </aside>
     
@@ -219,11 +519,11 @@ CUDA和CS都是为了解决复杂计算的并行运算方案，单从目的上�
     <div id="main" role="main" class="wrapper-content">
       <div class="container">
         <article class="posts">
-  <h1>CUDA开发笔记---Marching cubes算法的CUDA与Compute Shader实现</h1>
+  <h1>CUDA开发笔记---向量运算对比</h1>
 
   <div clsss="meta">
     <span class="date">
-      2020-09-06
+      2020-08-27
     </span>
 
     <ul class="tag">
@@ -238,41 +538,191 @@ CUDA和CS都是为了解决复杂计算的并行运算方案，单从目的上�
   </div>
 
   <div class="entry">
-    <p>最近一直都在学习CUDA，网上没有很好的教程，把官方的例子吃透应该就可以了。CUDA的官方例子中我最感兴趣的就是Marching cubes （MC）算法的实现。</p>
+    <p>最近开始学习CUDA。正式开始写代码前查了一些资料，对CUDA的印象就是擅长浮点数运算，缺点就是如果数据量不足够大，就不一定比CPU快。自己尝试了一些简单的对比后稍微有些理解了。</p>
 
-<p>http://paulbourke.net/geometry/polygonise/</p>
+<p>电脑配置：i7-6700HQ，GTX970m，16G。</p>
 
-<p>关于MC算法，可以看这个网页的介绍。从开始学CUDA的那一天起我就在思考CUDA和Compute Shader（CS）的主要差别是什么。一开始经过一番搜索，学习了CS的入门程序后，我的理解是线程差别。CUDA和CS的线程很类似，都是三维的，而且用法上似乎也差不多。</p>
+<p>测试使用三个CUDA官方例子中的三维向量计算函数：</p>
 
-<p>https://docs.microsoft.com/zh-cn/windows/win32/direct3dhlsl/sm5-attributes-numthreads?redirectedfrom=MSDN</p>
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">inline</span> <span class="n">__host__</span> <span class="n">__device__</span> <span class="n">float3</span> <span class="nf">normalize</span><span class="p">(</span><span class="n">float3</span> <span class="n">v</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">float</span> <span class="n">invLen</span> <span class="o">=</span> <span class="n">rsqrtf</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">v</span><span class="p">));</span>
+    <span class="k">return</span> <span class="n">v</span> <span class="o">*</span> <span class="n">invLen</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="kr">inline</span> <span class="n">__host__</span> <span class="n">__device__</span> <span class="kt">float</span> <span class="nf">length</span><span class="p">(</span><span class="n">float3</span> <span class="n">v</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="n">sqrtf</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">v</span><span class="p">));</span>
+<span class="p">}</span>
+<span class="kr">inline</span> <span class="n">__host__</span> <span class="n">__device__</span> <span class="kt">float</span> <span class="nf">dot</span><span class="p">(</span><span class="n">float3</span> <span class="n">a</span><span class="p">,</span> <span class="n">float3</span> <span class="n">b</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="n">a</span><span class="p">.</span><span class="n">x</span> <span class="o">*</span> <span class="n">b</span><span class="p">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">a</span><span class="p">.</span><span class="n">y</span> <span class="o">*</span> <span class="n">b</span><span class="p">.</span><span class="n">y</span> <span class="o">+</span> <span class="n">a</span><span class="p">.</span><span class="n">z</span> <span class="o">*</span> <span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>其中用到的其他函数是CUDA内置的sqrtf()和基于sqrtf()的rsqrtf()：平方根和平方根倒数</p>
 
-<p>https://docs.microsoft.com/en-us/windows/win32/direct3d11/direct3d-11-advanced-stages-compute-shader</p>
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">extern</span> <span class="n">__CUDA_MATH_CRTIMP</span> <span class="n">__DEVICE_FUNCTIONS_DECL__</span> <span class="n">__device_builtin__</span> <span class="kt">float</span> <span class="kr">__cdecl</span> <span class="n">sqrtf</span><span class="p">(</span><span class="kt">float</span><span class="p">)</span> <span class="n">__THROW</span><span class="p">;</span> 
+<span class="kr">inline</span> <span class="kt">float</span> <span class="nf">rsqrtf</span><span class="p">(</span><span class="kt">float</span> <span class="n">x</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="mf">1.0</span><span class="n">f</span> <span class="o">/</span> <span class="n">sqrtf</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
 
-<p>官方文档说CS5.0下Maximum Threads (X ×Y ×Z) = 1024， Maximum Z = 64。每个dispatch最大维度能有65535。</p>
+<p>输入： float3 a ：(99, 99, 99);
+            float3 b ：(999, 999, 999);</p>
 
-<p>1280 CUDA Cores</p>
+<p>时间单位ms。</p>
 
-<p>Maximum number of threads per multiprocessor: 2048</p>
+<p>第一次测试：使用以上三个函数计算100万次：normalize(a); length(a-b); dot(a,b).</p>
 
-<p>Maximum number of threads per block: 1024</p>
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th>normalize(a)</th>
+      <th>length(a-b)</th>
+      <th>dot(a,b)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>CPU用时</td>
+      <td>132</td>
+      <td>141</td>
+      <td>32</td>
+    </tr>
+    <tr>
+      <td>CUDA用时</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
 
-<p>Max dimension size of a thread block (x,y,z): (1024, 1024, 64)</p>
+<p>CUDA下直接爆内存卡死。可能是我的配置扛不住连续一百万次cudaMemcpy()。</p>
 
-<p>Max dimension size of a grid size  (x,y,z): (2147483647, 65535, 65535)</p>
+<p>第二次测试：换成100次。</p>
 
-<p>我GTX970M的CUDA参数是这样。乍一看CUDA的线程数量似乎更多，不过具体也不清楚。</p>
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th>normalize(a)</th>
+      <th>length(a-b)</th>
+      <th>dot(a,b)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>CPU用时</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>CUDA用时</td>
+      <td>109</td>
+      <td>14</td>
+      <td>16</td>
+    </tr>
+  </tbody>
+</table>
 
-<p>https://github.com/Wenzy–/Marching-cube-in-Unity</p>
+<p>结论：差距巨大，按照第一次测试的结果估算，这种情况下CPU比CUDA快5333倍。</p>
 
-<p>随后花了几天时间把一个CS的Marching cubes例子完全移植到了CUDA里，过程很复杂，而且效果不如CS，就不赘述了。直接讲结果。</p>
+<p>第三次测试：把单独输入换成数组一次输入。以下是不同大小数组的结果。</p>
 
-<p>CS的这个MC例子最大能运算175 ×175 ×175的体素数据，再大就会超过65535这个限制。在175尺寸下，最大纯MC部分延迟也不到200ms，可以说是非常恐怖了。</p>
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th>CPU nor</th>
+      <th>CUDA nor</th>
+      <th>CPU len</th>
+      <th>CUDA len</th>
+      <th>CPU dot</th>
+      <th>CUDA dot</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>100</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>1000</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>10000</td>
+      <td>1</td>
+      <td>2</td>
+      <td>1</td>
+      <td>2</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>100000</td>
+      <td>14</td>
+      <td>21</td>
+      <td>14</td>
+      <td>11</td>
+      <td>3</td>
+      <td>13</td>
+    </tr>
+    <tr>
+      <td>1000000</td>
+      <td>139</td>
+      <td>143</td>
+      <td>146</td>
+      <td>103</td>
+      <td>34</td>
+      <td>107</td>
+    </tr>
+    <tr>
+      <td>10000000</td>
+      <td>1395</td>
+      <td>1455</td>
+      <td>1460</td>
+      <td>1064</td>
+      <td>361</td>
+      <td>1056</td>
+    </tr>
+    <tr>
+      <td>100000000</td>
+      <td>14254</td>
+      <td>17737</td>
+      <td>14661</td>
+      <td>14809</td>
+      <td>3420</td>
+      <td>10722</td>
+    </tr>
+  </tbody>
+</table>
 
-<p>我一开始按照这个CS版MC的逻辑自己做了移植版，速度比CS版慢了几十倍。因为我是初学CUDA，不知道怎么高效做三维坐标索引，所以一开始用的cudaPitchedPtr。这个跑起来很慢，所以我就开始看官方例子。官方用的是基于二进制运算的三维索引，但索引范围的边长只能是16到128。除此外还用了thrust库对输入的体素数据进行基于Prefix sum的空体素剔除。但这一步算法在我测试的时候发现并不会加快速度，去掉反而会更快所以我就去掉了。官方版速度还可以，大概只比CS版慢了十倍。实际数据的话，同样的noise体素输入，同样的128边长，都是三十多万三角形，CS版一帧需要总时间大概200ms, 纯MC部分66ms。CUDA下总时间1270ms，纯MC部分953ms。纯MC之外就是获取和更新三角形法向量数据。在同一个应用下，先不说CS版是不是最优，CUDA这边连官方优化的例子都被CS吊着打。不过跟我自己实现的初版CUDA MC比起来还是快多了。</p>
+<p>这次的结果就有意思了。10000长度以下差别不是很大，10万次以上CUDA的length(a-b)明显比CPU快，但其他的还是比不过CPU。一亿次时爆了内存，程序卡了，CUDA的length(a-b)优势也因为爆内存而消失了。</p>
 
-<p>期间发现一个细节，或许就能说明CUDA和CS的差别。我在移植法向量平滑时出了问题，想把法向量平滑放到Shader这边完成，结果查了好久后发现Shader这边不能计算法向量平滑，因为无法在顶点函数里访问相邻的三角形数据。这可能就是CS诞生的初衷之一，也是CUDA的优势之一。CUDA更接近于常用的编程语言，虽然部分应用场景不如CS，但在拓展性上比CS强。HLSL语法是类C的，CUDA也有自己的数学库，float3，float4类型和运算都和HLSL下差不多，可以说CUDA就是把kernel镶嵌在C++里，而HLSL是单独拿出来。不过Shader语言好像都差不多。</p>
+<p>这就说明了CUDA的好几个特点。首先是输入量大的时候，把大量变量一起传给CUDA运算会比单个传快得多，因为单个传只用了CUDA的一个线程。在数据运算量不大的时候，CUDA和CPU差距也不大，甚至CPU还全面赶超CUDA。当数据量足够大时，CUDA的length(a-b)比CPU快了差不多一半，但其他的还是慢。</p>
 
-<p>CUDA和CS都是为了解决复杂计算的并行运算方案，单从目的上看似乎和Hadoop之类分布式运算的平台差不多。不过Hadoop是java语言，比C++和类C语言好用多了。貌似也有结合GPU运算和分布式架构的平台，以后接触到了再说吧。</p>
+<p>从函数上看，比dot的话，整数运算CUDA总是比CPU慢。 length函数中也是调用了dot，只不过是dot的两个输入相同。CUDA算dot应该比CPU慢，可是sqrtf()让CPU的length比它自己的dot运算慢了差不多四倍。输入a，b与a-b的量级差不多，所以差别就体现在sqrtf()上。CUDA的length就和它的dot差不多，应该是因为CUDA擅长浮点数运算，所以它的length就比CPU的快。</p>
+
+<p>可是刚刚的结论似乎没法解释normalize上CUDA和CPU差距不是很大的事实。normalize只是比length多了一个倒数和乘法运算。理论上应该和length差不多，实际却比length慢一半。换个角度，对比两者的dot和normalize，CUDA的这两个运算差距不是很大，normalize只比dot慢了一半。而CPU的normalize几乎用了它dot的四倍时间。其中的差异应该还是rsqrtf()的sqrtf()造成的。</p>
+
+<p>试了试嵌套调用normalize，第一次嵌套就比CPU快了一点。CPU/CUDA的时间比随着嵌套次数开始增加，1.04，1.07，1.18，1.13，1.17。normalize嵌套意义可能不大，因为嵌套之后每次运算过程都一样。</p>
+
+<p>以上结果都没有取平均值，不过还是能得出一些初步的结论。比如在牵扯到输入量巨大的浮点数运算时，CUDA才会展现出优势。</p>
+
 
   </div>
 
@@ -283,11 +733,17 @@ CUDA和CS都是为了解决复杂计算的并行运算方案，单从目的上�
 <div class="pagination">
   
     <span class="prev" >
-      <a href="http://localhost:4000/blog/cuda/">
+      <a href="http://localhost:4000/blog/motionTracking/">
         ← 上一篇
       </a>
     </span>
   
+  
+    <span class="next" >
+      <a href="http://localhost:4000/blog/cuda2/">
+        下一篇 →
+      </a>
+    </span>
   
 </div>
       </div>
@@ -304,7 +760,7 @@ CUDA和CS都是为了解决复杂计算的并行运算方案，单从目的上�
 		ga('create', 'UA-153094429-1', 'auto');
 		ga('send', 'pageview', {
 		  'page': '/blog/cuda/',
-		  'title': 'CUDA开发笔记---Marching cubes算法的CUDA与Compute Shader实现'
+		  'title': 'CUDA开发笔记---向量运算对比'
 		});
 	</script>
 	<!-- End Google Analytics -->
