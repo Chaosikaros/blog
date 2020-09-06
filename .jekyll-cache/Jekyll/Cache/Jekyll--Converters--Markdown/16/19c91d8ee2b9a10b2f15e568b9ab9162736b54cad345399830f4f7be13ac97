@@ -1,0 +1,36 @@
+I"�<p>最近一直都在学习CUDA，网上没有很好的教程，把官方的例子吃透应该就可以了。CUDA的官方例子中我最感兴趣的就是Marching cubes （MC）算法的实现。</p>
+
+<p>http://paulbourke.net/geometry/polygonise/</p>
+
+<p>关于MC算法，可以看这个网页的介绍。从开始学CUDA的那一天起我就在思考CUDA和Compute Shader（CS）的主要差别是什么。一开始经过一番搜索，学习了CS的入门程序后，我的理解是线程差别。CUDA和CS的线程很类似，都是三维的，而且用法上似乎也差不多。</p>
+
+<p>https://docs.microsoft.com/zh-cn/windows/win32/direct3dhlsl/sm5-attributes-numthreads?redirectedfrom=MSDN</p>
+
+<p>https://docs.microsoft.com/en-us/windows/win32/direct3d11/direct3d-11-advanced-stages-compute-shader</p>
+
+<p>官方文档说CS5.0下Maximum Threads (X ×Y ×Z) = 1024， Maximum Z = 64。每个dispatch最大维度能有65535。</p>
+
+<p>1280 CUDA Cores</p>
+
+<p>Maximum number of threads per multiprocessor: 2048</p>
+
+<p>Maximum number of threads per block: 1024</p>
+
+<p>Max dimension size of a thread block (x,y,z): (1024, 1024, 64)</p>
+
+<p>Max dimension size of a grid size  (x,y,z): (2147483647, 65535, 65535)</p>
+
+<p>我GTX970M的CUDA参数是这样。乍一看CUDA的线程数量似乎更多，不过具体也不清楚。</p>
+
+<p>https://github.com/Wenzy–/Marching-cube-in-Unity</p>
+
+<p>随后花了几天时间把一个CS的Marching cubes例子完全移植到了CUDA里，过程很复杂，而且效果不如CS，就不赘述了。直接讲结果。</p>
+
+<p>CS的这个MC例子最大能运算175 ×175 ×175的体素数据，再大就会超过65535这个限制。在175尺寸下，最大纯MC部分延迟也不到200ms，可以说是非常恐怖了。</p>
+
+<p>我一开始按照这个CS版MC的逻辑自己做了移植版，速度比CS版慢了几十倍。因为我是初学CUDA，不知道怎么高效做三维坐标索引，所以一开始用的cudaPitchedPtr。这个跑起来很慢，所以我就开始看官方例子。官方用的是基于二进制运算的三维索引，但索引范围的边长只能是16到128。除此外还用了thrust库对输入的体素数据进行基于Prefix sum的空体素剔除。但这一步算法在我测试的时候发现并不会加快速度，去掉反而会更快所以我就去掉了。官方版速度还可以，大概只比CS版慢了十倍。实际数据的话，同样的noise体素输入，同样的128边长，都是三十多万三角形，CS版一帧需要总时间大概200ms, 纯MC部分66ms。CUDA下总时间1270ms，纯MC部分953ms。纯MC之外就是获取和更新三角形法向量数据。在同一个应用下，先不说CS版是不是最优，CUDA这边连官方优化的例子都被CS吊着打。不过跟我自己实现的初版CUDA MC比起来还是快多了。</p>
+
+<p>期间发现一个细节，或许就能说明CUDA和CS的差别。我在移植法向量平滑时出了问题，想把法向量平滑放到Shader这边完成，结果查了好久后发现Shader这边不能计算法向量平滑，因为无法在顶点函数里访问相邻的三角形数据。这可能就是CS诞生的初衷之一，也是CUDA的优势之一。CUDA更接近于常用的编程语言，虽然部分应用场景不如CS，但在拓展性上比CS强。HLSL语法是类C的，CUDA也有自己的数学库，float3，float4类型和运算都和HLSL下差不多，可以说CUDA就是把kernel镶嵌在C++里，而HLSL是单独拿出来。不过Shader语言好像都差不多。</p>
+
+<p>CUDA和CS都是为了解决复杂计算的并行运算方案，单从目的上看似乎和Hadoop之类分布式运算的平台差不多。不过Hadoop是java语言，比C++和类C语言好用多了。貌似也有结合GPU运算和分布式架构的平台，以后接触到了再说吧。</p>
+:ET
